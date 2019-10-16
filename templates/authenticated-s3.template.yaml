@@ -120,7 +120,7 @@ Resources:
           ToPort: 22
       VpcId: !Ref VPCID
     Type: 'AWS::EC2::SecurityGroup'
-  EC2Instance:
+  ExampleInstance:
     Type: 'AWS::EC2::Instance'
     Metadata:
       AWS::CloudFormation::Authentication: 
@@ -130,13 +130,16 @@ Resources:
             - !Sub ${BucketName}
           roleName: 
             Ref: InstanceRole
-      'AWS::CloudFormation::Init':
-        config:
+      AWS::CloudFormation::Init:
+        configSets:
+          ec2_bootstrap:
+            - helloworld_cfg
+        helloworld_cfg:
           files:
             /root:
               source: !Sub
                 - >-
-                  https://${BucketName}.${S3Region}.amazonaws.com/${KeyPrefix}scripts/bootstrap.sh
+                  https://${BucketName}.${S3Region}.amazonaws.com/${KeyPrefix}scripts/helloword.sh
                 - BucketName: !Ref BucketName
                   S3Region: !If [ GovCloudCondition, s3-us-gov-west-1, s3 ]
                   KeyPrefix: !Ref KeyPrefix
@@ -145,6 +148,9 @@ Resources:
               group: root
               command: /root/bootstrap.sh 'hello world'
               authentication: S3AccessCreds
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
     Properties:
       IamInstanceProfile: !Ref InstanceProfile
       ImageId: !FindInMap 
@@ -156,10 +162,27 @@ Resources:
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
       SubnetId: !Ref SubnetId
-      UserData: !Base64 
+      UserData: !Base64
+        Fn::Sub:        
             #!/bin/bash -x
+            #cfn signaling functions
+            function cfn_fail
+            {
+              cfn-signal -e 1 --stack ${AWS::StackName} --region ${AWS::Region} --resource ExampleInstance
+              exit 1
+            }
+            function cfn_success
+            {
+              cfn-signal -e 0 --stack ${AWS::StackName} --region ${AWS::Region} --resource ExampleInstance
+              exit 0
+            }
             yum install -y git
             until git clone https://github.com/aws-quickstart/quickstart-linux-utilities.git ; do echo "Retrying"; done
             cd /quickstart-linux-utilities
+            source quickstart-cfn-tools.source
+            qs_update-os || qs_err
             qs_bootstrap_pip || qs_err " pip bootstrap failed "
             qs_aws-cfn-bootstrap || qs_err " cfn bootstrap failed "
+            echo "[INFO] Executing config-sets"
+            cfn-init -v --stack ${AWS::StackName} --resource ExampleInstance --configsets ec2_bootstrap --region ${AWS::Region} || cfn_fail
+            if [ $(qs_status) == 0 ]; then cfn_success; else; cfn_fail; fi

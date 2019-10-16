@@ -18,7 +18,7 @@ global:
   reporting: true
 tests:
   auth-example:
-    parameter_input: authenticated-s3-in-vpc.template.json
-    template_file: authenticated-s3-in-vpc.template.yaml
+    parameter_input: authenticated-s3-dev-vpc.template.json
+    template_file: authenticated-s3.template.yaml
     regions:
     - us-west-2

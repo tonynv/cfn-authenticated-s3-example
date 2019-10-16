@@ -4,6 +4,10 @@
         "ParameterValue": "$[taskcat_autobucket]"
     },
     {
+        "ParameterKey": "AccessCIDR",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
         "ParameterKey": "AvailabilityZones",
         "ParameterValue": "$[taskcat_getaz_2]"
     },
