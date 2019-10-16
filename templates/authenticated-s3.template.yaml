@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'S3 Authenticated bootstrapping Example'
+Metadata:
+  LICENSE: 'Apache License, Version 2.0' 
+Parameters:
+  AccessCIDR:
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Description: The IP address range that can be used to access to the EC2 instance
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+  KeyPairName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: id_rsa_aws
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+  SubnetId:
+    Description: The Public subnet where the ec2 instance will be launched
+    Type: AWS::EC2::Subnet::Id
+  VPCID:
+    Description: The VPC to launch the GitHub Enterprise server
+    Type: AWS::EC2::VPC::Id
+  BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: 'replace-with-your-staging-bucket'
+    Description: >-
+      S3 bucket name for the Quick Start assets. Quick Start bucket name can
+      include numbers, lowercase letters, uppercase letters, and hyphens (-). It
+      cannot start or end with a hyphen (-).
+    Type: String
+  KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*$'
+    ConstraintDescription: >-
+      Can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
+    Default: 'cfn-authenticated-s3-example/'
+    Description: >-
+      S3 key prefix where assets are located should end withforward slash (/).
+    Type: String
+Mappings:
+  AWSAMIRegionMap:
+    ap-northeast-1:
+      US1604HVM: ami-0f9af249e7fa6f61b
+    ap-northeast-2:
+      US1604HVM: ami-082bdb3b2d54d5a19
+    ap-south-1:
+      US1604HVM: ami-0927ed83617754711
+    ap-southeast-1:
+      US1604HVM: ami-0ee0b284267ea6cde
+    ap-southeast-2:
+      US1604HVM: ami-0328aad0f6218c429
+    ca-central-1:
+      US1604HVM: ami-06a6f79d24f2b6a21
+    eu-central-1:
+      US1604HVM: ami-050a22b7e0cf85dd0
+    eu-north-1:
+      US1604HVM: ami-7dd85203
+    eu-west-1:
+      US1604HVM: ami-03ef731cc103c9f09
+    eu-west-2:
+      US1604HVM: ami-0fab23d0250b9a47e
+    eu-west-3:
+      US1604HVM: ami-0bb607148d8cf36fb
+    sa-east-1:
+      US1604HVM: ami-02b235ae9b5819d3b
+    us-east-1:
+      US1604HVM: ami-04763b3055de4860b
+    us-east-2:
+      US1604HVM: ami-0d03add87774b12c5
+    us-west-1:
+      US1604HVM: ami-0dbf5ea29a7fc7e05
+    ap-northeast-3:
+      US1604HVM: ami-0154a1d609dece568
+    us-west-2:
+      US1604HVM: ami-0994c095691a46fb5
+Conditions:
+  GovCloudCondition: !Equals
+    - !Ref AWS::Region
+    - us-gov-west-1
+Resources:
+  AuthenticatedS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+        PolicyName: AuthenticatedS3GetObjects
+        Roles: 
+        - !Ref InstanceRole
+        PolicyDocument:
+           Statement:
+             - Sid: BucketAccess
+               Effect: Allow
+               Action:
+                 - 's3:GetObject'
+               Resource: !Sub 'arn:aws:s3:::${BucketName}/${KeyPrefix}*'
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Principal:
+              Service: ec2.amazonaws.com
+            Effect: Allow
+            Sid: ''
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+  InstanceSecurityGroup:
+    Properties:
+      GroupDescription: 'ssh access to instance'
+      SecurityGroupIngress:
+        - CidrIp: !Ref AccessCIDR
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+      VpcId: !Ref VPCID
+    Type: 'AWS::EC2::SecurityGroup'
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Authentication: 
+        S3AccessCreds: 
+          type: S3
+          buckets: 
+            - !Sub ${BucketName}
+          roleName: 
+            Ref: InstanceRole
+      'AWS::CloudFormation::Init':
+        config:
+          files:
+            /root:
+              source: !Sub
+                - >-
+                  https://${BucketName}.${S3Region}.amazonaws.com/${KeyPrefix}scripts/bootstrap.sh
+                - BucketName: !Ref BucketName
+                  S3Region: !If [ GovCloudCondition, s3-us-gov-west-1, s3 ]
+                  KeyPrefix: !Ref KeyPrefix
+              mode: '000755'
+              owner: root
+              group: root
+              command: /root/bootstrap.sh 'hello world'
+              authentication: S3AccessCreds
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !FindInMap 
+        - AWSAMIRegionMap
+        - !Ref 'AWS::Region'
+        - US1604HVM
+      InstanceType: t2.small
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId: !Ref SubnetId
+      UserData: !Base64 
+            #!/bin/bash -x
+            yum install -y git
+            until git clone https://github.com/aws-quickstart/quickstart-linux-utilities.git ; do echo "Retrying"; done
+            cd /quickstart-linux-utilities
+            qs_bootstrap_pip || qs_err " pip bootstrap failed "
+            qs_aws-cfn-bootstrap || qs_err " cfn bootstrap failed "

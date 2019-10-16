@@ -1,0 +1,14 @@
+[
+    {
+        "ParameterKey": "BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
+    },
+    {
+        "ParameterKey": "AvailabilityZones",
+        "ParameterValue": "$[taskcat_getaz_2]"
+    },
+    {
+        "ParameterKey": "KeyPairName",
+        "ParameterValue": "default"
+    }
+]

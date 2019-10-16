@@ -1,0 +1,25 @@
+global:
+  owner: tonynv@amazon.com
+  qsname: cfn-authenticated-s3-example
+  regions:
+    - ap-northeast-1
+    - ap-northeast-2
+    - ap-south-1
+    - ap-southeast-1
+    - ap-southeast-2
+    - ca-central-1
+    - eu-central-1
+    - eu-west-1
+    - eu-west-2
+    - us-east-1
+    - us-east-2
+    - us-west-1
+    - us-west-2
+  reporting: true
+tests:
+  ex1:
+    parameter_input: authenticated-s3-in-vpc.template.json
+    template_file: authenticated-s3-in-vpc.template.yaml
+    regions:
+    - us-west-2
+    - us-east-1
