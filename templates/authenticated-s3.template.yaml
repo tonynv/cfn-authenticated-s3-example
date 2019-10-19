@@ -2,6 +2,8 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: 'S3 Authenticated bootstrapping Example'
 Metadata:
   LICENSE: 'Apache License, Version 2.0' 
+  AUTHOR: 'Tony Vattathil'
+  EMAIL: 'tonynv@amazon.com'
 Parameters:
   AccessCIDR:
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
@@ -81,20 +83,7 @@ Conditions:
     - !Ref AWS::Region
     - us-gov-west-1
 Resources:
-  AuthenticatedS3Policy:
-    Type: AWS::IAM::Policy
-    Properties:
-        PolicyName: AuthenticatedS3GetObjects
-        Roles: 
-        - !Ref InstanceRole
-        PolicyDocument:
-           Statement:
-             - Sid: BucketAccess
-               Effect: Allow
-               Action:
-                 - 's3:GetObject'
-               Resource: !Sub 'arn:aws:s3:::${BucketName}/${KeyPrefix}*'
-  InstanceRole:
+  RootRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -104,12 +93,21 @@ Resources:
               Service: ec2.amazonaws.com
             Effect: Allow
             Sid: ''
-  InstanceProfile:
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                Resource: !Sub 'arn:aws:s3:::${BucketName}/${KeyPrefix}*'
+                Effect: Allow
+          PolicyName: AuthenticatedS3GetObjects
+  RootInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: /
       Roles:
-        - !Ref InstanceRole
+        - !Ref RootRole
   InstanceSecurityGroup:
     Properties:
       GroupDescription: 'ssh access to instance'
@@ -129,7 +127,7 @@ Resources:
           buckets: 
             - !Sub ${BucketName}
           roleName: 
-            Ref: InstanceRole
+            Ref: RootRole
       AWS::CloudFormation::Init:
         configSets:
           ec2_bootstrap:
@@ -152,7 +150,7 @@ Resources:
       ResourceSignal:
         Timeout: PT10M
     Properties:
-      IamInstanceProfile: !Ref InstanceProfile
+      IamInstanceProfile: !Ref RootInstanceProfile
       ImageId: !FindInMap 
         - AWSAMIRegionMap
         - !Ref 'AWS::Region'
