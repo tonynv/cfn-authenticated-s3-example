@@ -178,7 +178,7 @@ Resources:
             - helloworld_cfg
         helloworld_cfg:
           files:
-            /root/bootstrap.sh:
+            /tmp/bootstrap.sh:
               source: !Sub
                 - >-
                   https://${BucketName}.${S3Region}.amazonaws.com/${KeyPrefix}scripts/print_stdout.sh
@@ -188,7 +188,7 @@ Resources:
               mode: '000755'
               owner: root
               group: root
-              command: /root/bootstrap.sh 'hello world' >/tmp/bootstrap.log
+              command: /tmp/bootstrap.sh 'hello world'
               authentication: S3AccessCreds
     CreationPolicy:
       ResourceSignal:
