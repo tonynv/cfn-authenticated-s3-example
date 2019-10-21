@@ -82,6 +82,9 @@ Conditions:
   GovCloudCondition: !Equals
     - !Ref AWS::Region
     - us-gov-west-1
+  UsEastCondition: !Equals
+    - !Ref AWS::Region
+    - us-east-1
 Resources:
   RootRole:
     Type: AWS::IAM::Role
@@ -139,7 +142,7 @@ Resources:
                 - >-
                   https://${BucketName}.${S3Region}.amazonaws.com/${KeyPrefix}scripts/print_stdout.sh
                 - BucketName: !Ref BucketName
-                  S3Region: !If [ GovCloudCondition, s3-us-gov-west-1, s3 ]
+                  S3Region: !If [ GovCloudCondition, s3-us-gov-west-1, !If [ UsEastCondition, s3, !Sub 's3.${AWS::Region}'  ] ]
                   KeyPrefix: !Ref KeyPrefix
               mode: '000755'
               owner: root
