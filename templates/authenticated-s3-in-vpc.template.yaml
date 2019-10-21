@@ -32,7 +32,6 @@ Metadata:
         default: Key Name
       AccessCIDR:
         default: Permitted IP range
-
 Parameters:
   AvailabilityZones:
    Description: >-
@@ -100,7 +99,6 @@ Resources:
           - ','
           - !Ref AvailabilityZones
         KeyPairName: !Ref KeyPairName
-        BucketName: !Ref BucketName
         NumberOfAZs: '2'
         PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
