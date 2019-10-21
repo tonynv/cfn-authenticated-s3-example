@@ -151,7 +151,8 @@ Resources:
               authentication: S3AccessCreds
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT10M
+        Count: 1
+        Timeout: PT5M
     Properties:
       IamInstanceProfile: !Ref RootInstanceProfile
       ImageId: !FindInMap 
