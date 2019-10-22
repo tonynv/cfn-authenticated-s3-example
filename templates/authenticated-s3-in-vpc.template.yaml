@@ -110,6 +110,7 @@ Resources:
         - https://${BucketName}.${Region}.amazonaws.com/${KeyPrefix}templates/authenticated-s3.template.yaml
         - Region: !If [GovCloudCondition , s3-us-gov-west-1 , s3]
       Parameters:
+        BucketName: !Ref BucketName  
         KeyPairName: !Ref KeyPairName
         AccessCIDR: !Ref AccessCIDR
         SubnetId:
