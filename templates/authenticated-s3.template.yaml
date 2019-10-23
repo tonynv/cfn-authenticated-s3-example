@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'S3 Authenticated bootstrapping Example'
+Description: 'S3 Authenticated bootstrapping Example (qs-tb2p0t02)'
 Metadata:
   LICENSE: 'Apache License, Version 2.0' 
   AUTHOR: 'Tony Vattathil'

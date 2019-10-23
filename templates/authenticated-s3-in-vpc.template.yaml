@@ -1,4 +1,4 @@
-Description: "VPC + Example"
+Description: "VPC + S3 Authenticated bootstrapping Example (qs-tb2p0t01)"
 Metadata:
   LICENSE: Apache License Version 2.0
   AWS::CloudFormation::Interface:
